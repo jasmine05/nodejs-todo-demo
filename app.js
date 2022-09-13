@@ -1,6 +1,10 @@
 //dependencies required for the app
 var express = require("express");
 var bodyParser = require("body-parser");
+const MongoClient = require('mongodb').MongoClient;
+
+const MONGODB_URL = process.env.MONGODB_URL;
+
 var app = express();
 
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -38,11 +42,49 @@ app.post("/removetask", function(req, res) {
 });
 
 //render the ejs and display added task, completed task
-app.get("/", function(req, res) {
-    res.render("index", { task: task, complete: complete });
+app.get("/", async function(req, res) {
+
+  
+    /*
+     * Requires the MongoDB Node.js Driver
+     * https://mongodb.github.io/node-mongodb-native
+     */
+    
+    const agg = [
+      {
+        '$project': {
+          'bedrooms': 1, 
+          '_id': 0
+        }
+      }, {
+        '$limit': 10
+      }
+    ];
+    
+    const client = await MongoClient.connect(
+         MONGODB_URL,
+      { useNewUrlParser: true, useUnifiedTopology: true }
+    );
+    const coll = client.db('sample_airbnb').collection('listingsAndReviews');
+    const cursor = coll.aggregate(agg);
+    const result = await cursor.toArray();
+    await client.close();
+
+    console.log(result);
+
+    var ejsResult=[];
+    result.forEach(el => {
+        console.log(el);
+        ejsResult.push("bedrooms:"+ el.bedrooms)
+    });
+    
+
+    res.render("index", { task: ejsResult, complete: complete });
 });
 
 //set app to listen on port 3000
 app.listen(process.env.PORT || 3000, function() {
+
     console.log("server is running on port ", process.env.PORT || 3000);
 });
+
