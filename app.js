@@ -1,7 +1,9 @@
 //dependencies required for the app
 var express = require("express");
 var bodyParser = require("body-parser");
+
 const MongoClient = require('mongodb').MongoClient;
+const ObjectId = require('mongodb').ObjectId; 
 
 const MONGODB_URL = process.env.MONGODB_URL;
 
@@ -15,7 +17,23 @@ app.use(express.static("public"));
 //post route for adding new task 
 app.post("/addtask",async function(req, res) {
 
-    const doc = JSON.parse(req.body.newtask);
+    var input=req.body.newtask;
+
+    var doc;
+
+    if(testJSON(input)){
+      doc = JSON.parse(input);
+    }
+    else{
+      if (input==""){
+        res.redirect("/");
+        return;
+      }
+      doc={};
+      doc.input=input;
+    }
+    
+   console.log(doc); 
 
     const client = await MongoClient.connect(
       MONGODB_URL,
@@ -23,12 +41,51 @@ app.post("/addtask",async function(req, res) {
     );
     const coll = client.db('faber').collection('todos');
     const result = await coll.insertOne(doc);
+    console.log(result);
     await client.close();
 
     res.redirect("/");
 });
 
-app.post("/removetask", function(req, res) {
+app.post("/removetask", async function(req, res) {
+
+  var input=req.body.check || null;
+
+  if (input == null) {
+    res.redirect("/");
+    return
+  }
+
+    console.log(req.body.check);
+    let todoString=req.body.check;
+    let todo=JSON.parse(todoString);
+
+    console.log(todo._id);
+
+    const objId=new ObjectId(todo._id);
+
+    const client = await MongoClient.connect(
+      MONGODB_URL,
+      { useNewUrlParser: true, useUnifiedTopology: true }
+    );
+
+    const coll = client.db('faber').collection('todos');
+    const result = await coll.findOne({_id:objId});
+
+    console.log(result);
+    
+    const updated= await coll.updateOne( {_id: objId},
+        {
+          $set: {
+            status: "FINISHED"
+          }
+        })
+
+    console.log(updated);
+
+    await client.close();
+
+    console.log(result);
     
     res.redirect("/");
 });
@@ -52,11 +109,13 @@ async function getValidToDos() {
   const agg = [
     {
       '$limit': 10
-    }, {
-      '$project': {
-        '_id': 0
-      }
-    }, {
+    }, 
+    // {
+    //   '$project': {
+    //     '_id': 0
+    //   }
+    // }, 
+    {
       '$match': {
         'status': {
           '$ne': 'FINISHED'
@@ -76,6 +135,9 @@ async function getValidToDos() {
 
   var ejsResult = [];
   result.forEach(el => {
+    let id=el._id;
+    delete el._id;
+    el._id=id;
     ejsResult.push(JSON.stringify(el));
   });
   return ejsResult;
@@ -116,3 +178,15 @@ async function getFinishedToDos() {
   return ejsResult;
 }
 
+function testJSON(text){
+  if (typeof text!=="string"){
+      return false;
+  }
+  try{
+      var json = JSON.parse(text);
+      return (typeof json === 'object');
+  }
+  catch (error){
+      return false;
+  }
+}
