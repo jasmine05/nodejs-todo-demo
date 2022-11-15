@@ -1,179 +1,118 @@
-//dependencies required for the app
-var express = require('express')
-var bodyParser = require('body-parser')
+const express = require('express')
+const bodyParser = require('body-parser')
+const { MongoClient, ObjectId } = require('mongodb')
 
-const MongoClient = require('mongodb').MongoClient
-const ObjectId = require('mongodb').ObjectId
+const { MONGO_USER = '', MONGO_PASS = '', MONGO_HOST = 'localhost', MONGO_PORT = '27017' } = process.env
+const MONGO_URL = `mongodb://${MONGO_USER}:${MONGO_PASS}@${MONGO_HOST}:${MONGO_PORT}`
 
-const MONGODB_URL = process.env.MONGODB_URL
-
-var app = express()
+const APP_PORT = process.env.PORT || 4000
+const app = express()
 
 app.use(bodyParser.urlencoded({ extended: true }))
 app.set('view engine', 'ejs')
-//render css files
 app.use(express.static('public'))
 
-//post route for adding new task
-app.post('/addtask', async function (req, res) {
-	var input = req.body.newtask
+app.post('/create-task', async (req, res) => {
+	const task = req.body
 
-	var doc
-
-	if (testJSON(input)) {
-		doc = JSON.parse(input)
-	} else {
-		if (input == '') {
-			res.redirect('/')
-			return
-		}
-		doc = {}
-		doc.input = input
+	if (!task.title) {
+		return res.redirect('/')
 	}
 
-	console.log(doc)
+	const { client, todos } = await getMongoClient()
+	const result = await todos.insertOne(task)
 
-	const client = await MongoClient.connect(MONGODB_URL, { useNewUrlParser: true, useUnifiedTopology: true })
-	const coll = client.db('faber').collection('todos')
-	const result = await coll.insertOne(doc)
-	console.log(result)
 	await client.close()
 
 	res.redirect('/')
 })
 
-app.post('/removetask', async function (req, res) {
-	var input = req.body.check || null
+app.post('/complete-task', async (req, res) => {
+	const taskId = req.body.id
 
-	if (input == null) {
-		res.redirect('/')
-		return
+	if (!taskId) {
+		return res.redirect('/')
 	}
 
-	console.log(req.body.check)
-	let todoString = req.body.check
-	let todo = JSON.parse(todoString)
-
-	console.log(todo._id)
-
-	const objId = new ObjectId(todo._id)
-
-	const client = await MongoClient.connect(MONGODB_URL, { useNewUrlParser: true, useUnifiedTopology: true })
-
-	const coll = client.db('faber').collection('todos')
-	const result = await coll.findOne({ _id: objId })
-
-	console.log(result)
-
-	const updated = await coll.updateOne(
-		{ _id: objId },
+	const { client, todos } = await getMongoClient()
+	const result = await todos.updateOne(
+		{ _id: new ObjectId(taskId) },
 		{
 			$set: {
-				status: 'FINISHED',
+				status: 'COMPLETED',
 			},
 		}
 	)
 
-	console.log(updated)
-
 	await client.close()
-
-	console.log(result)
 
 	res.redirect('/')
 })
 
-//render the ejs and display added task, completed task
-app.get('/', async function (req, res) {
-	var validTodos = await getValidToDos()
-	var completeTodos = await getFinishedToDos()
+app.get('/', async (req, res) => {
+	const active = await getActiveTasks()
+	const completed = await getCompletedTasks()
 
-	res.render('index', { task: validTodos, complete: completeTodos })
+	res.render('index', { active, completed })
 })
 
-//set app to listen on port 3000
-app.listen(process.env.PORT || 3000, function () {
-	console.log('server is running on port ', process.env.PORT || 3000)
+app.listen(APP_PORT, () => {
+	console.log('The server is running on port: ', APP_PORT)
 })
 
-async function getValidToDos() {
-	const agg = [
+async function getMongoClient() {
+	const client = await MongoClient.connect(MONGO_URL, { useNewUrlParser: true, useUnifiedTopology: true })
+	const todos = client.db('faber').collection('todos')
+
+	return { client, todos }
+}
+
+async function getActiveTasks() {
+	const operations = [
 		{
 			$limit: 10,
 		},
-		// {
-		//   '$project': {
-		//     '_id': 0
-		//   }
-		// },
 		{
 			$match: {
 				status: {
-					$ne: 'FINISHED',
+					$ne: 'COMPLETED',
 				},
 			},
 		},
 	]
 
-	const client = await MongoClient.connect(MONGODB_URL, { useNewUrlParser: true, useUnifiedTopology: true })
-	const coll = client.db('faber').collection('todos')
-	const cursor = coll.aggregate(agg)
+	const { client, todos } = await getMongoClient()
+	const cursor = todos.aggregate(operations)
 	const result = await cursor.toArray()
+
 	await client.close()
 
-	var ejsResult = []
-	result.forEach(el => {
-		let id = el._id
-		delete el._id
-		el._id = id
-		ejsResult.push(JSON.stringify(el))
-	})
-	return ejsResult
+	return result
 }
 
-async function getFinishedToDos() {
-	const agg = [
+async function getCompletedTasks() {
+	const operations = [
 		{
 			$limit: 10,
 		},
 		{
+			$match: {
+				status: 'COMPLETED',
+			},
+		},
+		{
 			$project: {
 				_id: 0,
-			},
-		},
-		{
-			$match: {
-				status: 'FINISHED',
-			},
-		},
-		{
-			$project: {
 				status: 0,
 			},
 		},
 	]
 
-	const client = await MongoClient.connect(MONGODB_URL, { useNewUrlParser: true, useUnifiedTopology: true })
-	const coll = client.db('faber').collection('todos')
-	const cursor = coll.aggregate(agg)
+	const { client, todos } = await getMongoClient()
+	const cursor = todos.aggregate(operations)
 	const result = await cursor.toArray()
+
 	await client.close()
 
-	var ejsResult = []
-	result.forEach(el => {
-		ejsResult.push(JSON.stringify(el))
-	})
-	return ejsResult
-}
-
-function testJSON(text) {
-	if (typeof text !== 'string') {
-		return false
-	}
-	try {
-		var json = JSON.parse(text)
-		return typeof json === 'object'
-	} catch (error) {
-		return false
-	}
+	return result
 }
