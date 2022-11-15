@@ -4,7 +4,7 @@
 	"description": "A simple to do list app ",
 	"main": "app.js",
 	"scripts": {
-		"start": "node app.js",
+		"start": "nodemon -r dotenv/config app.js",
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
 	"engines": {
@@ -17,6 +17,16 @@
 		"ejs": "^3.1.8",
 		"express": "^4.15.4",
 		"mongodb": "^4.2.2"
+	},
+	"devDependencies": {
+		"dotenv": "^16.0.3",
+		"nodemon": "^2.0.20"
+	},
+	"nodemonConfig": {
+		"watch": [
+			"app.js",
+			".env"
+		]
 	},
 	"prettier": {
 		"quoteProps": "consistent",
