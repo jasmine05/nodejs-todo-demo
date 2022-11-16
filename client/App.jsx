@@ -1,81 +1,44 @@
+import { inject, observer } from 'mobx-react'
 import { useState, useEffect, useCallback } from 'react'
+import CreateItemCard from './components/CreateItemCard'
+import ListItemCard from './components/ListItemCard'
+import ActiveListCard from './components/PendingListCard'
 import './styles.css'
 
-export default function App() {
+function App(props) {
 	const [active, setActive] = useState([])
 	const [completed, setCompleted] = useState([])
-
-	const loadTasks = useCallback(async () => {
-		const response = await fetch('/api/tasks')
-		const tasks = await response.json()
-
-		setActive(tasks.active)
-		setCompleted(tasks.completed)
-	})
-
-	const createTask = useCallback(async evt => {
-		evt.preventDefault()
-		const form = evt.target
-		const data = new FormData(form)
-		const task = Object.fromEntries(data.entries())
-
-		await fetch('/api/create-task', {
-			method: 'post',
-			body: JSON.stringify(task),
-			headers: { 'Content-Type': 'application/json' },
-		})
-
-		form.reset()
-
-		loadTasks()
-	})
-
-	const completeTask = useCallback(async evt => {
-		evt.preventDefault()
-		const form = evt.target
-		const data = new FormData(form)
-		const task = Object.fromEntries(data.entries())
-
-		await fetch('/api/complete-task', {
-			method: 'post',
-			body: JSON.stringify(task),
-			headers: { 'Content-Type': 'application/json' },
-		})
-
-		loadTasks()
-	})
+	const { todoStore } = props.rootStore
 
 	useEffect(() => {
 		loadTasks()
 	}, [])
 
+	const loadTasks = async () => {
+		await todoStore.loadTodos()
+		setActive(todoStore.getActive())
+		setCompleted(todoStore.getComplete())
+	}
+
+	const createTask = async title => {
+		await todoStore.createTask({ title: title })
+		loadTasks()
+	}
+
+	const completeTask = async task => {
+		await todoStore.completeATask({ id: task._id })
+		loadTasks()
+	}
+
 	return (
 		<div className="container">
+			{todoStore.isLoading && <h1> is Loading... </h1>}
 			<h2>A Simple ToDo List App</h2>
-
-			<form action="#" method="post" onSubmit={createTask}>
-				<input type="text" name="title" placeholder="add new task" />
-				<button>Add Task</button>
-			</form>
-
-			<h2>Pending Tasks</h2>
-
-			<ul>
-				{active.map(task => (
-					<li key={task._id}>
-						<form action="#" method="post" onSubmit={completeTask}>
-							<input type="hidden" name="id" value={task._id} />
-							<button>✔</button> {task.title}
-						</form>
-					</li>
-				))}
-			</ul>
-
-			<h2>Completed Tasks</h2>
-
-			{completed.map(task => (
-				<li key={task._id}>✔ {task.title}</li>
-			))}
+			<CreateItemCard title="Add Tasks" createTaskInParent={title => createTask(title)} />
+			<ActiveListCard title="Pending Tasks" cardData={active} completeTaskInParent={task => completeTask(task)} />
+			<ListItemCard title="Completed Tasks" cardData={completed} />
 		</div>
 	)
 }
+
+export default inject('rootStore')(observer(App))
