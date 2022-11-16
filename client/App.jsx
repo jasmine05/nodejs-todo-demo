@@ -2,14 +2,16 @@ import { inject, observer } from 'mobx-react'
 import { useState, useEffect, useCallback } from 'react'
 import CreateItemCard from './components/CreateItemCard'
 import ListItemCard from './components/ListItemCard'
+import { Tab, Tabs, TabList, TabPanel } from 'react-tabs'
 import ActiveListCard from './components/PendingListCard'
 import './styles.css'
 
 function App(props) {
-	const types = ['open', 'complete']
+	const types = ['active', 'complete']
 	const [activeTab, setActiveTab] = useState(types[0])
-	const [active, setActive] = useState([])
-	const [completed, setCompleted] = useState([])
+
+	const [activeTodos, setActiveTodos] = useState([])
+	const [completedTodos, setCompletedTodos] = useState([])
 	const { todoStore } = props.rootStore
 
 	useEffect(() => {
@@ -18,8 +20,8 @@ function App(props) {
 
 	const loadTasks = async () => {
 		await todoStore.loadTodos()
-		setActive(todoStore.getActive())
-		setCompleted(todoStore.getComplete())
+		setActiveTodos(todoStore.getActive())
+		setCompletedTodos(todoStore.getComplete())
 	}
 
 	const createTask = async title => {
@@ -34,34 +36,40 @@ function App(props) {
 
 	const tabPanel = () => {
 		return (
-			<>
-				<div>
+			<Tabs>
+				<TabList>
 					{types.map(type => (
 						<Tab
 							key={type}
-							active={active === type}
+							active={activeTab === type}
 							onClick={() => {
-								setActive(type)
-								dispatch(FILTER(active))
+								setActiveTab(type)
 							}}
 						>
 							{type}
 						</Tab>
 					))}
-				</div>
-				<div className="cardOutline">something!</div>
-			</>
+				</TabList>
+				<TabPanel>
+					<ActiveListCard
+						title="Active Tasks"
+						cardData={activeTodos}
+						completeTaskInParent={task => completeTask(task)}
+					/>
+				</TabPanel>
+				<TabPanel>
+					<ListItemCard title="Completed Tasks" cardData={completedTodos} />
+				</TabPanel>
+			</Tabs>
 		)
 	}
 
 	return (
 		<div className="container">
 			{todoStore.isLoading && <h1> is Loading... </h1>}
-			<h2>A Simple ToDo List App</h2>
-			{/* <div>{tabPanel()}</div> */}
 			<CreateItemCard title="Add Tasks" createTaskInParent={title => createTask(title)} />
-			<ActiveListCard title="Pending Tasks" cardData={active} completeTaskInParent={task => completeTask(task)} />
-			<ListItemCard title="Completed Tasks" cardData={completed} />
+			<h2>A Simple ToDo List App</h2>
+			<div>{tabPanel()}</div>
 		</div>
 	)
 }
