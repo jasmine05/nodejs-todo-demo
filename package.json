@@ -23,7 +23,8 @@
 		"mobx-react": "^7.6.0",
 		"mongodb": "^4.2.2",
 		"react": "^18.2.0",
-		"react-dom": "^18.2.0"
+		"react-dom": "^18.2.0",
+		"react-tabs": "^5.1.0"
 	},
 	"devDependencies": {
 		"@vitejs/plugin-react": "^2.2.0",

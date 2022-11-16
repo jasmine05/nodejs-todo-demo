@@ -3,8 +3,7 @@ const bodyParser = require('body-parser')
 const { MongoClient, ObjectId } = require('mongodb')
 
 const { MONGO_USER = '', MONGO_PASS = '', MONGO_HOST = 'localhost', MONGO_PORT = '27017' } = process.env
-// const MONGO_URL = `mongodb://${MONGO_USER}:${MONGO_PASS}@${MONGO_HOST}:${MONGO_PORT}`
-const MONGO_URL = `mongodb://admin:admin@ac-wla3d7d-shard-00-00.znuqvg1.mongodb.net:27017,ac-wla3d7d-shard-00-01.znuqvg1.mongodb.net:27017,ac-wla3d7d-shard-00-02.znuqvg1.mongodb.net:27017/?ssl=true&replicaSet=atlas-u2plkc-shard-0&authSource=admin&retryWrites=true&w=majority`
+const MONGO_URL = `mongodb://${MONGO_USER}:${MONGO_PASS}@${MONGO_HOST}:${MONGO_PORT}`
 
 const APP_PORT = process.env.PORT || 4000
 const app = express()
