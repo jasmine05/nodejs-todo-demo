@@ -1,38 +1,34 @@
-import { makeAutoObservable, runInAction } from 'mobx'
+import { makeAutoObservable, runInAction, toJS } from 'mobx'
 
 export default class TodoStore {
-	todosObj = {}
+	todos = {}
 	isLoading = true
-	status = ''
+
 	constructor() {
 		makeAutoObservable(this)
 	}
 
 	getTodos() {
-		return this.todosObj
+		return this.todos
 	}
-	getActive() {
-		return this.todosObj.active
-	}
-	getComplete() {
-		return this.todosObj.completed
+
+	getTotalActiveTodos() {
+		const active = toJS(this.todos.active)
+		return active && active.length
 	}
 
 	// Fetches all Todos from the server.
 	async loadTodos() {
-		console.log('loading')
 		this.isLoading = true
-
 		try {
 			const response = await fetch('/api/tasks')
 			const tasks = await response.json()
-			this.todosObj = { ...tasks }
 			runInAction(() => {
+				this.todos = { ...tasks }
 				this.isLoading = false
 			})
 		} catch (error) {
 			runInAction(() => {
-				this.status = 'error'
 				this.isLoading = false
 			})
 		}
@@ -51,7 +47,6 @@ export default class TodoStore {
 			})
 		} catch (error) {
 			runInAction(() => {
-				this.status = 'error'
 				this.isLoading = false
 			})
 		}
@@ -70,7 +65,6 @@ export default class TodoStore {
 			})
 		} catch (error) {
 			runInAction(() => {
-				this.status = 'error'
 				this.isLoading = false
 			})
 		}

@@ -10,8 +10,6 @@ function App(props) {
 	const types = ['active', 'complete']
 	const [activeTab, setActiveTab] = useState(types[0])
 
-	const [activeTodos, setActiveTodos] = useState([])
-	const [completedTodos, setCompletedTodos] = useState([])
 	const { todoStore } = props.rootStore
 
 	useEffect(() => {
@@ -20,8 +18,6 @@ function App(props) {
 
 	const loadTasks = async () => {
 		await todoStore.loadTodos()
-		setActiveTodos(todoStore.getActive())
-		setCompletedTodos(todoStore.getComplete())
 	}
 
 	const createTask = async title => {
@@ -41,7 +37,7 @@ function App(props) {
 					{types.map(type => (
 						<Tab
 							key={type}
-							active={activeTab === type}
+							active={activeTab}
 							onClick={() => {
 								setActiveTab(type)
 							}}
@@ -53,12 +49,12 @@ function App(props) {
 				<TabPanel>
 					<ActiveListCard
 						title="Active Tasks"
-						cardData={activeTodos}
-						completeTaskInParent={task => completeTask(task)}
+						cardData={todoStore.getTodos().active}
+						onComplete={task => completeTask(task)}
 					/>
 				</TabPanel>
 				<TabPanel>
-					<ListItemCard title="Completed Tasks" cardData={completedTodos} />
+					<ListItemCard title="Completed Tasks" cardData={todoStore.getTodos().completed} />
 				</TabPanel>
 			</Tabs>
 		)
@@ -67,8 +63,9 @@ function App(props) {
 	return (
 		<div className="container">
 			{todoStore.isLoading && <h1> is Loading... </h1>}
-			<CreateItemCard title="Add Tasks" createTaskInParent={title => createTask(title)} />
+			<CreateItemCard title="Add Tasks" onCreateTask={title => createTask(title)} />
 			<h2>A Simple ToDo List App</h2>
+			<div>Still {todoStore.getTotalActiveTodos()} active tasks!</div>
 			<div>{tabPanel()}</div>
 		</div>
 	)
