@@ -1,15 +1,14 @@
-import { Provider } from 'mobx-react'
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
-import RootStore from './stores/rootStore'
+import store from './store'
+import { Provider } from 'react-redux'
 
-const rootStore = new RootStore()
+// As of React 18
+const root = ReactDOM.createRoot(document.getElementById('root'))
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-	<React.StrictMode>
-		<Provider rootStore={rootStore}>
-			<App />
-		</Provider>
-	</React.StrictMode>
+root.render(
+	<Provider store={store}>
+		<App />
+	</Provider>
 )

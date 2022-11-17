@@ -1,12 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 function CreateItemCard(props) {
 	const [title, setTitle] = useState([])
-
-	const completeTask = title => {
-		props.createTaskInParent(title)
-		setTitle('')
-	}
 
 	return (
 		<div>
@@ -19,7 +14,14 @@ function CreateItemCard(props) {
 					onChange={e => setTitle(e.target.value)}
 					placeholder="add new task"
 				/>
-				<button onClick={() => completeTask(title)}>Add Task</button>{' '}
+				<button
+					onClick={() => {
+						props.onCreateTask(title)
+						setTitle('')
+					}}
+				>
+					Add Task
+				</button>{' '}
 			</div>
 		</div>
 	)
